@@ -81,8 +81,7 @@ jobs:
         with:
           target: http://localhost:5000
           output: security-results/nuclei/nuclei.log
-          json: true
-          flags: "-severity critical,high,medium -stats -timeout 300"
+          flags: "-severity critical,high,medium -stats -timeout 300 -json"
           sarif-export: security-results/nuclei/nuclei.sarif
 
       - name: Verify Nuclei Results
