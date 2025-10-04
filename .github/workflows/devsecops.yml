@@ -199,7 +199,7 @@ jobs:
 
       - name: Run ZAP Scan
         run: |
-          docker pull softwaresecurityproject/zap-stable:2.14.0
+          docker pull ghcr.io/zaproxy/zaproxy:stable
           
           # Create zap.yaml with correct permissions
           sudo mkdir -p /home/runner/zap
@@ -210,7 +210,7 @@ jobs:
             -v $(pwd):/zap/wrk:rw \
             -v /home/runner/zap:/home/zap:rw \
             --network host \
-            softwaresecurityproject/zap-stable:2.14.0 \
+            ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t http://localhost:5000 \
             -J security-results/zap/zap-output.json \
@@ -218,7 +218,7 @@ jobs:
 
       - name: Cleanup Docker Image
         if: always()
-        run: docker rmi softwaresecurityproject/zap-stable:2.14.0
+        run: docker rmi ghcr.io/zaproxy/zaproxy:stable
 
       - name: Upload ZAP Results
         if: always()
