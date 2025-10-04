@@ -75,40 +75,24 @@ jobs:
       - name: Create Results Directory
         run: mkdir -p security-results/nuclei
 
-      - name: Install Nuclei
-        run: |
-          # Download and install Nuclei binary from GitHub releases
-          NUCLEI_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest | grep tag_name | cut -d '"' -f 4)
-          echo "Installing Nuclei version: $NUCLEI_VERSION"
-          
-          # Download the binary
-          curl -sL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION#v}_linux_amd64.zip" -o nuclei.zip
-          
-          # Extract and install
-          unzip nuclei.zip
-          chmod +x nuclei
-          sudo mv nuclei /usr/local/bin/
-          
-          # Verify installation
-          nuclei -version
-
       - name: Run Nuclei Scan
-        run: |
-          # Update nuclei templates
-          nuclei -update-templates
-          
-          # Run Nuclei scan
-          nuclei -u http://localhost:5000 \
-            -t ~/nuclei-templates/http/ \
-            -severity critical,high,medium \
-            -json \
-            -o security-results/nuclei/nuclei-results.json \
-            -timeout 300
+        id: nuclei_scan
+        uses: projectdiscovery/nuclei-action@main
+        with:
+          target: http://localhost:5000
+          output: security-results/nuclei/nuclei.log
+          json: true
+          flags: "-severity critical,high,medium -stats -timeout 300"
+          sarif-export: security-results/nuclei/nuclei.sarif
 
       - name: Verify Nuclei Results
         run: |
-          if [ -s security-results/nuclei/nuclei-results.json ]; then
+          if [ -s security-results/nuclei/nuclei.log ]; then
             echo "Nuclei scan completed successfully"
+            # Convert log to JSON if needed
+            if [ -s security-results/nuclei/nuclei.log ]; then
+              echo "Nuclei results available in nuclei.log"
+            fi
           else
             echo "No Nuclei issues found"
             echo '[]' > security-results/nuclei/nuclei-results.json
@@ -243,7 +227,7 @@ jobs:
               <div class="tool-section">
                   <h2 class="tool-title">🎯 Nuclei Results <span class="modern-badge">Modern DAST</span></h2>
                   <pre>
-          $(format_json "security-results/nuclei/nuclei-results.json")
+          $(cat security-results/nuclei/nuclei.log 2>/dev/null || echo "No Nuclei results available")
                   </pre>
               </div>
               
