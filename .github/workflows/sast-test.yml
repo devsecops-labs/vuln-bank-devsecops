@@ -26,6 +26,7 @@ jobs:
             -Dsonar.organization=devsecops-labs
             -Dsonar.sources=.
             -Dsonar.python.version=3.9
+            -Dsonar.python.security.rule.repositories=python-security,python-security-hotspot
 
       - name: Store SonarQube Results
         run: |
