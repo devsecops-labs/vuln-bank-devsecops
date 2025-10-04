@@ -2,7 +2,7 @@ name: DevSecOps Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main , implement_SAST ]
   pull_request:
     branches: [ main ]
 
@@ -22,8 +22,8 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=commando-x_vuln-bank
-            -Dsonar.organization=commando-x
+            -Dsonar.projectKey=devsecops-labs_vuln-bank-devsecops
+            -Dsonar.organization=devsecops-labs
             -Dsonar.sources=.
             -Dsonar.python.version=3.9
 
