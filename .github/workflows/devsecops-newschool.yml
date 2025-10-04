@@ -77,20 +77,23 @@ jobs:
 
       - name: Install Nuclei
         run: |
-          # Install Nuclei using official installer
-          curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/scripts/install.sh | bash
+          # Download and install Nuclei binary from GitHub releases
+          NUCLEI_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest | grep tag_name | cut -d '"' -f 4)
+          echo "Installing Nuclei version: $NUCLEI_VERSION"
           
-          # Add to PATH for current session
-          export PATH=$PATH:$HOME/go/bin
+          # Download the binary
+          curl -sL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION#v}_linux_amd64.zip" -o nuclei.zip
+          
+          # Extract and install
+          unzip nuclei.zip
+          chmod +x nuclei
+          sudo mv nuclei /usr/local/bin/
           
           # Verify installation
           nuclei -version
 
       - name: Run Nuclei Scan
         run: |
-          # Add to PATH for this step
-          export PATH=$PATH:$HOME/go/bin
-          
           # Update nuclei templates
           nuclei -update-templates
           
