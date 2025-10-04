@@ -75,10 +75,15 @@ jobs:
       - name: Create Results Directory
         run: mkdir -p security-results/nuclei
 
+      - name: Install Nuclei
+        uses: projectdiscovery/setup-nuclei-action@v1
+        with:
+          version: latest
+
       - name: Run Nuclei Scan
         run: |
-          # Install Nuclei
-          go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+          # Update nuclei templates
+          nuclei -update-templates
           
           # Run Nuclei scan
           nuclei -u http://localhost:5000 \
