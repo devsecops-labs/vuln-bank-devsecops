@@ -22,8 +22,8 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=commando-x_vuln-bank
-            -Dsonar.organization=commando-x
+            -Dsonar.projectKey=devsecops-labs_vuln-bank-devsecops
+            -Dsonar.organization=devsecops-labs
             -Dsonar.sources=.
             -Dsonar.python.version=3.9
 
@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p security-results/sonarqube
           curl -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-               "${{ secrets.SONAR_HOST_URL }}/api/issues/search?projectKeys=commando-x_vuln-bank" \
+               "${{ secrets.SONAR_HOST_URL }}/api/issues/search?projectKeys=devsecops-labs_vuln-bank-devsecops" \
                > security-results/sonarqube/issues.json
           
           if [ -s security-results/sonarqube/issues.json ]; then
