@@ -1,4 +1,4 @@
-name: DevSecOps Pipeline
+name: DevSecOps Pipeline - Oldschool (Traditional Tools)
 
 on:
   push:
