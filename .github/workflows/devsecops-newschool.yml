@@ -76,12 +76,21 @@ jobs:
         run: mkdir -p security-results/nuclei
 
       - name: Install Nuclei
-        uses: projectdiscovery/setup-nuclei-action@v1
-        with:
-          version: latest
+        run: |
+          # Install Nuclei using official installer
+          curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/scripts/install.sh | bash
+          
+          # Add to PATH for current session
+          export PATH=$PATH:$HOME/go/bin
+          
+          # Verify installation
+          nuclei -version
 
       - name: Run Nuclei Scan
         run: |
+          # Add to PATH for this step
+          export PATH=$PATH:$HOME/go/bin
+          
           # Update nuclei templates
           nuclei -update-templates
           
