@@ -233,8 +233,10 @@ jobs:
           path: security-results/zap/
           retention-days: 90
 
-      - name: Generate HTML Report
-        run: |
+  # Generate HTML Report
+    reporting:     
+    - name: Generate HTML Report
+      run: |
             # Create a function to format JSON content
             format_json() {
               if [ -f "$1" ]; then
@@ -314,10 +316,10 @@ jobs:
             </html>
             EOF
 
-      - name: Upload Report
-        uses: actions/upload-artifact@v4
-        with:
-            name: security-report
+    - name: Upload Reporting
+      uses: actions/upload-artifact@v4
+      with:
+            name: security-reporting
             path: security-results/report.html
             retention-days: 90
   
