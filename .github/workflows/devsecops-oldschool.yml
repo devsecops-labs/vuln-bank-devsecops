@@ -11,6 +11,7 @@ jobs:
   sast:
     name: SAST (SonarQube)
     runs-on: ubuntu-latest
+    if: ${{ secrets.SONAR_TOKEN && secrets.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@v4
       
@@ -18,8 +19,8 @@ jobs:
         uses: sonarsource/sonarqube-scan-action@master
         continue-on-error: true
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || '' }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || '' }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
             -Dsonar.projectKey=devsecops-labs_vuln-bank-devsecops
@@ -27,31 +28,37 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.python.version=3.9
 
-      - name: Store SonarQube Results
+      - name: Verify SonarQube Results
         run: |
-          mkdir -p security-results/sonarqube
-          curl -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-               "${{ secrets.SONAR_HOST_URL }}/api/issues/search?projectKeys=devsecops-labs_vuln-bank-devsecops" \
-               > security-results/sonarqube/issues.json
+            mkdir -p security-results/sonarqube
+            sudo apt-get update -y && sudo apt-get install -y jq
           
-          if [ -s security-results/sonarqube/issues.json ]; then
-            echo "SonarQube results saved successfully"
-          else
-            echo "No SonarQube issues found"
-            echo '{"issues": []}' > security-results/sonarqube/issues.json
-          fi
+            echo "Fetching SonarQube issues..."
+            curl -sf -u ${{ secrets.SONAR_TOKEN }}:\ \
+            "${{ secrets.SONAR_HOST_URL }}/api/issues/search?projectKeys=devsecops-labs_vuln-bank-devsecops" \
+            | jq . > security-results/sonarqube/issues.json || echo '{"issues": []}' > security-results/sonarqube/issues.json      
+            
+            issue_count=$(jq '.issues | length' security-results/sonarqube/issues.json)
+            echo "Total SonarQube issues: $issue_count"
+            
+            if [ "$issue_count" -gt 0 ]; then
+            echo "Found $issue_count issues. Review required."
+            else
+            echo "No SonarQube issues found."
+            fi
 
       - name: Upload SonarQube Results
         uses: actions/upload-artifact@v4
         with:
           name: sonar-results
           path: security-results/sonarqube/
-          retention-days: 90
+          retention-days: 30
 
   # SCA – Dependency Scanning
   sca:
     name: Dependency Scanning (Snyk)
     runs-on: ubuntu-latest
+    if: ${{ secrets.SNYK_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +79,7 @@ jobs:
         uses: snyk/actions/python@master
         continue-on-error: true
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN || '' }}
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --json-file-output=security-results/snyk/scan-results.json
 
@@ -90,7 +97,7 @@ jobs:
         with:
           name: snyk-results
           path: security-results/snyk/scan-results.json
-          retention-days: 90
+          retention-days: 30
 
   # Container Scanning
   container_scan:
@@ -129,7 +136,7 @@ jobs:
         with:
           name: trivy-results
           path: security-results/trivy/scan-results.json
-          retention-days: 90
+          retention-days: 30
 
   # IaC Scanning
   iac_scan:
@@ -165,7 +172,7 @@ jobs:
         with:
           name: checkov-results
           path: security-results/checkov/results.json
-          retention-days: 90
+          retention-days: 30
 
   # Dynamic Analysis
   zap_scan:
@@ -228,140 +235,95 @@ jobs:
           path: security-results/zap/
           retention-days: 90
 
-  # Report Generation
-  report:
-    name: Generate Security Report
-    needs: [sast, sca, container_scan, iac_scan, zap_scan]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Results Directory
-        run: mkdir -p security-results/{sonarqube,snyk,trivy,checkov,zap}
-
-      - name: Download All Results
-        run: |
-          for tool in sonarqube snyk trivy checkov zap; do
-            echo "Downloading $tool results..."
-            mkdir -p security-results/$tool
-          done
-
-      - name: Download SonarQube Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: sonar-results
-          path: security-results/sonarqube
-
-      - name: Download Snyk Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: snyk-results
-          path: security-results/snyk
-
-      - name: Download Trivy Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: trivy-results
-          path: security-results/trivy
-
-      - name: Download Checkov Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: checkov-results
-          path: security-results/checkov
-
-      - name: Download ZAP Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: zap-results
-          path: security-results/zap
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Generate HTML Report
         run: |
-          # Create a function to format JSON content
-          format_json() {
-            if [ -f "$1" ]; then
-              cat "$1" | jq -r '.' || echo "Invalid JSON format"
-            else
-              echo "No results available"
-            fi
-          }
+            # Create a function to format JSON content
+            format_json() {
+              if [ -f "$1" ]; then
+                cat "$1" | jq -r '.' || echo "Invalid JSON format"
+              else
+                echo "No results available"
+              fi
+            }
+  
+            # Generate the report
+            cat << EOF > security-results/report.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Security Scan Results</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f5f5f5; }
+                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+                    .tool-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                    .tool-title { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+                    .vulnerability-item { margin: 10px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border-left: 4px solid #667eea; }
+                    .severity-critical { color: #dc3545; font-weight: bold; }
+                    .severity-high { color: #fd7e14; }
+                    .severity-medium { color: #ffc107; }
+                    .severity-low { color: #28a745; }
+                    .modern-badge { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🚀 Security Scan Results</h1>
+                    <p>Security tools for comprehensive vulnerability detection</p>
+                </div>
+                
+                <div class="tool-section">
+                    <h2 class="tool-title">🔍 SonarQube Analysis <span class="modern-badge">SonarQube</span></h2>
+                      <pre>
+            $(cat security-results/sonarqube/issues.json 2>/dev/null || echo "No SonarQube results available")
+                    </pre>
+                </div>
+                
+                <div class="tool-section">
+                    <h2 class="tool-title">📦 Snyk SCA <span class="modern-badge">Snyk</span></h2>
+                    <pre>
+            $(cat security-results/snyk/scan-results.json 2>/dev/null || echo "No Snyk results available")
+                    </pre>
+                </div>
+                
+                <div class="tool-section">
+                    <h2 class="tool-title">🎯 ZAP Results <span class="modern-badge">OWASP ZAP</span></h2>
+                    <pre>
+            $(cat security-results/zap/zap-output.json 2>/dev/null || echo "No ZAP results available")
+                    </pre>
+                </div>
 
-          # Generate the report with actual content
-          cat << EOF > security-results/report.html
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Security Scan Results</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 20px; }
-                  .tool-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; }
-                  .vulnerability-item { margin: 10px 0; padding: 10px; background-color: #f9f9f9; }
-                  .severity-critical { color: darkred; font-weight: bold; }
-                  .severity-high { color: red; }
-                  .severity-medium { color: orange; }
-                  .severity-low { color: #999900; }
-              </style>
-          </head>
-          <body>
-              <h1>Security Scan Results</h1>
-              
-              <div class="tool-section">
-                  <h2>SonarQube Results</h2>
-                  <pre>
-          $(format_json "security-results/sonarqube/issues.json")
-                  </pre>
-              </div>
-              
-              <div class="tool-section">
-                  <h2>Snyk Results</h2>
-                  <pre>
-          $(format_json "security-results/snyk/scan-results.json")
-                  </pre>
-              </div>
-              
-              <div class="tool-section">
-                  <h2>Trivy Results</h2>
-                  <pre>
-          $(format_json "security-results/trivy/scan-results.json")
-                  </pre>
-              </div>
-              
-              <div class="tool-section">
-                  <h2>Checkov Results</h2>
-                  <pre>
-          $(format_json "security-results/checkov/results.json")
-                  </pre>
-              </div>
-              
-              <div class="tool-section">
-                  <h2>ZAP Results</h2>
-                  <pre>
-          $(format_json "security-results/zap/zap-output.json")
-                  </pre>
-              </div>
-          </body>
-          </html>
-          EOF
+                 <div class="tool-section">
+                    <h2 class="tool-title">🎯 Trivy Results <span class="modern-badge">Trivy</span></h2>
+                      <pre>
+            $(cat security-results/trivy/scan-results.json 2>/dev/null || echo "No Trivy results available")
+                    </pre>
+                </div>
+                
+                <div class="tool-section">
+                    <h2 class="tool-title">🎯 Checkov Results <span class="modern-badge">Checkov</span></h2>
+                    <pre>
+            $(cat security-results/checkov/results.json 2>/dev/null || echo "No Checkov results available")
+                    </pre>
+                </div>
+                
+                <div class="tool-section">
+                    <h2 class="tool-title">🔐 Trivy Results <span class="modern-badge">Trivy</span></h2>
+                    <pre>
+            $(format_json "security-results/trivy/scan-results.json")
+                    </pre>
+                </div>
+            </body>
+            </html>
+            EOF
 
-      - name: Debug - Show Report Content
-        run: cat security-results/report.html
-
-      - name: Upload HTML Report
+      - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
-          name: security-report
-          path: security-results/report.html
-          retention-days: 90
-
+            name: security-report
+            path: security-results/report.html
+            retention-days: 90
+  
+  
   # Deployment
   #  deploy:
     #  name: Deploy to EC2

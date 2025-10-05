@@ -115,7 +115,7 @@ jobs:
           path: security-results/nuclei/
           retention-days: 90
 
-  # Secrets Scanning - TruffleHog (Free Alternative)
+  # Secrets Scanning - TruffleHog
   trufflehog_scan:
     name: Secrets Scanning (TruffleHog)
     runs-on: ubuntu-latest
@@ -149,109 +149,4 @@ jobs:
         with:
           name: trufflehog-results
           path: security-results/trufflehog/
-          retention-days: 90
-
-  # Modern Report Generation
-  modern_report:
-    name: Generate Modern Security Report
-    needs: [codeql_scan, dependabot_scan, nuclei_scan, trufflehog_scan]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Results Directory
-        run: mkdir -p security-results/{nuclei,trufflehog}
-
-      - name: Download All Results
-        run: |
-          for tool in nuclei trufflehog; do
-            echo "Downloading $tool results..."
-            mkdir -p security-results/$tool
-          done
-
-      - name: Download Nuclei Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: nuclei-results
-          path: security-results/nuclei
-
-      - name: Download TruffleHog Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: trufflehog-results
-          path: security-results/trufflehog
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
-      - name: Generate Modern HTML Report
-        run: |
-          # Create a function to format JSON content
-          format_json() {
-            if [ -f "$1" ]; then
-              cat "$1" | jq -r '.' || echo "Invalid JSON format"
-            else
-              echo "No results available"
-            fi
-          }
-
-          # Generate the modern report
-          cat << EOF > security-results/modern-report.html
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Modern Security Scan Results</title>
-              <style>
-                  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f5f5f5; }
-                  .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-                  .tool-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                  .tool-title { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
-                  .vulnerability-item { margin: 10px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border-left: 4px solid #667eea; }
-                  .severity-critical { color: #dc3545; font-weight: bold; }
-                  .severity-high { color: #fd7e14; }
-                  .severity-medium { color: #ffc107; }
-                  .severity-low { color: #28a745; }
-                  .modern-badge { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-              </style>
-          </head>
-          <body>
-              <div class="header">
-                  <h1>🚀 Modern Security Scan Results</h1>
-                  <p>Next-generation security tools for comprehensive vulnerability detection</p>
-              </div>
-              
-              <div class="tool-section">
-                  <h2 class="tool-title">🔍 CodeQL Analysis <span class="modern-badge">GitHub Native</span></h2>
-                  <p>✅ Results available in GitHub Security tab</p>
-              </div>
-              
-              <div class="tool-section">
-                  <h2 class="tool-title">📦 Dependabot SCA <span class="modern-badge">GitHub Native</span></h2>
-                  <p>✅ Results available in GitHub Security tab</p>
-              </div>
-              
-              <div class="tool-section">
-                  <h2 class="tool-title">🎯 Nuclei Results <span class="modern-badge">Modern DAST</span></h2>
-                  <pre>
-          $(cat security-results/nuclei/nuclei.log 2>/dev/null || echo "No Nuclei results available")
-                  </pre>
-              </div>
-              
-              <div class="tool-section">
-                  <h2 class="tool-title">🔐 TruffleHog Results <span class="modern-badge">Secrets Hunter</span></h2>
-                  <pre>
-          $(format_json "security-results/trufflehog/trufflehog-results.json")
-                  </pre>
-              </div>
-          </body>
-          </html>
-          EOF
-
-      - name: Upload Modern Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: modern-security-report
-          path: security-results/modern-report.html
           retention-days: 90
