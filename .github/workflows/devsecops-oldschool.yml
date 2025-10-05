@@ -72,7 +72,7 @@ jobs:
         uses: snyk/actions/python@master
         continue-on-error: true
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN || '' }}
         with:
           args: --json-file-output=security-results/snyk/scan-results.json
 
@@ -363,25 +363,25 @@ jobs:
           retention-days: 90
 
   # Deployment
-  deploy:
-    name: Deploy to EC2
-    needs: [sast, sca, container_scan, iac_scan, zap_scan, report]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
+  #  deploy:
+    #  name: Deploy to EC2
+    #  needs: [sast, sca, container_scan, iac_scan, zap_scan, report]
+    #  runs-on: ubuntu-latest
+    #  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    #  steps:
+      #  - uses: actions/checkout@v4
+      #
+      #  - name: Configure AWS Credentials
+        #  uses: aws-actions/configure-aws-credentials@v2
+        #  with:
+          #  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          #  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          #  aws-region: us-east-1
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Deploy to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          chmod +x deploy/deploy.sh
-          ./deploy/deploy.sh
+      #  - name: Deploy to EC2
+        #  env:
+          #   EC2_HOST: ${{ secrets.EC2_HOST }}
+          #  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        #  run: |
+          #  chmod +x deploy/deploy.sh
+          #  ./deploy/deploy.sh

@@ -115,9 +115,9 @@ jobs:
           path: security-results/nuclei/
           retention-days: 90
 
-  # Secrets Scanning - Gitleaks
-  gitleaks_scan:
-    name: Secrets Scanning (Gitleaks)
+  # Secrets Scanning - TruffleHog (Free Alternative)
+  trufflehog_scan:
+    name: Secrets Scanning (TruffleHog)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -125,48 +125,46 @@ jobs:
           fetch-depth: 0
 
       - name: Create Results Directory
-        run: mkdir -p security-results/gitleaks
+        run: mkdir -p security-results/trufflehog
 
-      - name: Run Gitleaks Scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-
-      - name: Run Gitleaks with JSON Output
+      - name: Run TruffleHog Scan
         run: |
-          gitleaks detect --source . --report-format json --report-path security-results/gitleaks/gitleaks-results.json || true
+          # Install TruffleHog
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+          
+          # Run scan
+          trufflehog filesystem . --json --output security-results/trufflehog/trufflehog-results.json || true
 
-      - name: Verify Gitleaks Results
+      - name: Verify TruffleHog Results
         run: |
-          if [ -s security-results/gitleaks/gitleaks-results.json ]; then
-            echo "Gitleaks scan completed successfully"
+          if [ -s security-results/trufflehog/trufflehog-results.json ]; then
+            echo "TruffleHog scan completed successfully"
           else
             echo "No secrets found"
-            echo '[]' > security-results/gitleaks/gitleaks-results.json
+            echo '[]' > security-results/trufflehog/trufflehog-results.json
           fi
 
-      - name: Upload Gitleaks Results
+      - name: Upload TruffleHog Results
         uses: actions/upload-artifact@v4
         with:
-          name: gitleaks-results
-          path: security-results/gitleaks/
+          name: trufflehog-results
+          path: security-results/trufflehog/
           retention-days: 90
 
   # Modern Report Generation
   modern_report:
     name: Generate Modern Security Report
-    needs: [codeql_scan, dependabot_scan, nuclei_scan, gitleaks_scan]
+    needs: [codeql_scan, dependabot_scan, nuclei_scan, trufflehog_scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Create Results Directory
-        run: mkdir -p security-results/{nuclei,gitleaks}
+        run: mkdir -p security-results/{nuclei,trufflehog}
 
       - name: Download All Results
         run: |
-          for tool in nuclei gitleaks; do
+          for tool in nuclei trufflehog; do
             echo "Downloading $tool results..."
             mkdir -p security-results/$tool
           done
@@ -178,12 +176,12 @@ jobs:
           name: nuclei-results
           path: security-results/nuclei
 
-      - name: Download Gitleaks Results
+      - name: Download TruffleHog Results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: gitleaks-results
-          path: security-results/gitleaks
+          name: trufflehog-results
+          path: security-results/trufflehog
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -242,9 +240,9 @@ jobs:
               </div>
               
               <div class="tool-section">
-                  <h2 class="tool-title">🔐 Gitleaks Results <span class="modern-badge">Secrets Hunter</span></h2>
+                  <h2 class="tool-title">🔐 TruffleHog Results <span class="modern-badge">Secrets Hunter</span></h2>
                   <pre>
-          $(format_json "security-results/gitleaks/gitleaks-results.json")
+          $(format_json "security-results/trufflehog/trufflehog-results.json")
                   </pre>
               </div>
           </body>
