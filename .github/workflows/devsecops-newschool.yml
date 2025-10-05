@@ -170,14 +170,14 @@ jobs:
           done
 
       - name: Download Nuclei Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: nuclei-results
           path: security-results/nuclei
 
       - name: Download TruffleHog Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: trufflehog-results

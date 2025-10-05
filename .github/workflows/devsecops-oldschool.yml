@@ -247,35 +247,35 @@ jobs:
           done
 
       - name: Download SonarQube Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: sonar-results
           path: security-results/sonarqube
 
       - name: Download Snyk Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: snyk-results
           path: security-results/snyk
 
       - name: Download Trivy Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: trivy-results
           path: security-results/trivy
 
       - name: Download Checkov Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: checkov-results
           path: security-results/checkov
 
       - name: Download ZAP Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           name: zap-results
