@@ -153,7 +153,7 @@ jobs:
           directory: .
           framework: dockerfile,github_actions
           output_format: json
-          output_file: security-results/checkov/results.json
+          output_file_path: security-results/checkov/results.json
           soft_fail: true
 
       - name: Verify Checkov Results
