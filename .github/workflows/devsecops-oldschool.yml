@@ -235,6 +235,7 @@ jobs:
 
   reporting:
     name: Generate and Upload HTML Report
+    needs: [sast, sca, container_scan, iac_scan, zap_scan]
     runs-on: ubuntu-latest
     steps:
       - name: Generate HTML Report
