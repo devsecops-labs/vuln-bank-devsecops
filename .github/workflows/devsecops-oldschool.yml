@@ -47,7 +47,7 @@ jobs:
           fi
 
       - name: Upload SonarQube Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sonar-results
           path: security-results/sonarqube/
@@ -91,7 +91,7 @@ jobs:
           fi
 
       - name: Upload Snyk Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: snyk-results
           path: security-results/snyk/scan-results.json
@@ -130,7 +130,7 @@ jobs:
           fi
 
       - name: Upload Trivy Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: trivy-results
           path: security-results/trivy/scan-results.json
@@ -166,7 +166,7 @@ jobs:
           fi
 
       - name: Upload Checkov Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: checkov-results
           path: security-results/checkov/results.json
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload ZAP Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: zap-results
           path: security-results/zap/
@@ -305,7 +305,7 @@ jobs:
           EOF
 
       - name: Upload Reporting
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: security-reporting
           path: security-results/report.html
